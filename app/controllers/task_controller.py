@@ -2,6 +2,7 @@ from sanic.response import json
 from sanic_openapi import doc
 from uuid import UUID
 from services.task_service import TaskService
+from services.llm_service import LLMService
 from models.User import User
 from sanic.exceptions import SanicException
 from sanic.request import Request
@@ -19,6 +20,7 @@ class TaskController:
         self.app.add_route(self.create_task, "/tasks", methods=["POST"])
         self.app.add_route(self.delete_task, "/tasks/<task_id>", methods=["DELETE"])
         self.app.add_route(self.get_all_tasks, "/tasks", methods=["GET"])
+        self.app.add_route(self.split_task, "/tasks/<task_id>/split", methods=["POST"])
 
     def get_user_by_uuid(self, user_uuid: UUID) -> Optional[User]:
         """
@@ -50,10 +52,10 @@ class TaskController:
         task = await self.task_service.create_task(title, description, user)
 
         response_data = {
-            "uuid": str(task.uuid),
+            "uuid": str(task.id),
             "title": task.title,
             "description": task.description,
-            "user_id": str(task.user.id),
+            "user_id": str(task.user.uuid),
             "created_at": task.created_at.isoformat(),
         }
 
@@ -108,3 +110,53 @@ class TaskController:
         ]
 
         return json({"tasks": response_data}, status=200)
+
+    @doc.summary("Split a task into two subtasks")
+    @doc.description(
+        "Use LLM to split a task into two subtasks for the authenticated user."
+    )
+    async def split_task(self, request: Request, task_id: str) -> HTTPResponse:
+        """
+        Split a task into two subtasks for the authenticated user.
+        """
+        user_uuid = request.ctx.user_uuid  # Assuming user is authenticated
+
+        # Fetch the user by UUID
+        user = await self.get_user_by_uuid(user_uuid)
+        if not user:
+            return json({"error": "User not found"}, status=404)
+
+        # Fetch the task by ID for the user
+        task = await self.task_service.get_task_by_id(task_id, user)
+        if not task:
+            return json({"error": "Task not found"}, status=404)
+
+        try:
+            # Call the TaskService to split the task into subtasks
+            subtasks = await self.task_service.split_task(
+                parent_task=task,  # Pass the task itself as the parent task
+                num_subtasks=2,  # Default number of subtasks is 2
+            )
+
+            # Prepare the response with details of the created subtasks
+            created_subtasks = []
+            for subtask in subtasks:
+                created_subtasks.append(
+                    {
+                        "uuid": str(subtask.id),  # Use the task's UUID
+                        "title": subtask.title,  # Subtask title
+                        "description": subtask.description,  # Subtask description
+                        "user_id": str(
+                            subtask.user.id
+                        ),  # User ID associated with the subtask
+                        "created_at": subtask.created_at.isoformat(),  # Creation time in ISO format
+                    }
+                )
+
+            return json(
+                {"message": "Task split successfully", "subtasks": created_subtasks},
+                status=200,
+            )
+        except ValueError as e:
+            # If there was an issue with the task splitting, handle the exception
+            return json({"error": str(e)}, status=400)

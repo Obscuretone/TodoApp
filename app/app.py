@@ -7,14 +7,16 @@ from controllers.task_controller import TaskController
 from tortoise import Tortoise
 from services.task_service import TaskService
 from services.user_service import UserService
+from services.llm_service import LLMService
+from connections.chatgpt import ChatGPTConnection
 from middleware.auth import auth_middleware
 
 from config import Config
 
-app = Sanic("cbc-todo-api")
+app = Sanic("AI-TODO-API")
 
 # CORS configuration
-CORS_URL = os.environ.get("CORS_ORIGIN", "http://localhost:3000")
+CORS_URL = Config.CORS_ORIGIN
 CORS(app, origins=[CORS_URL], supports_credentials=True)
 app.register_middleware(auth_middleware, "request")
 
@@ -29,17 +31,17 @@ async def hello_world(request):
 async def setup_services(app, loop):
     # Initialize the database connection using Tortoise
     await Tortoise.init(
-        db_url=os.environ.get(
-            "DATABASE_URL",
-            "mysql://todo_user:todo_pass@127.0.0.1:3307/cbc_todo",
-        ),
+        db_url=Config.DATABASE_URI,
         modules={"models": ["models.Task", "models.User"]},
     )
     await Tortoise.generate_schemas()  # Generate schemas in the database
 
+    chatgpt_connection = ChatGPTConnection(Config.OPENAI_SECRET)
+    llm_service = LLMService(chatgpt_connection)
+
     # Initialize service instances
     user_service = UserService()
-    task_service = TaskService()
+    task_service = TaskService(llm_service)
 
     # Initialize controllers and pass the app and services
     user_controller = UserController(app, user_service)

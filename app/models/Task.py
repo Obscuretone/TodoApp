@@ -18,6 +18,9 @@ class Task(models.Model):
     user = fields.ForeignKeyField(
         "models.User", related_name="tasks"
     )  # Link to the User model
+    parent_task = fields.ForeignKeyField(
+        "models.Task", related_name="subtasks", null=True, on_delete=fields.SET_NULL
+    )  # Self-referencing field to link parent task
 
     class Meta:
         table = "tasks"
