@@ -1,0 +1,46 @@
+services:
+  # Frontend Service (React or Vue.js)
+  frontend:
+    build:
+      context: ./frontend # Adjust the context to the frontend directory
+      dockerfile: Dockerfile # This is the Dockerfile inside the frontend directory
+    env_file:
+      - ./frontend/.env # Add this line to use the .env file
+    ports:
+      - "5173:80" # Expose port 5173 on your local machine, but Nginx uses 80
+      - "3000:3000" # Expose port for the React dev server
+    volumes:
+      - ./frontend/src:/app/src # Bind mount the src folder (live-reload enabled)
+    networks:
+      - todo-app
+    command: npm start # Run the React dev server for live-reload
+
+  database:
+    image: mysql:8.0
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql # Referencing the defined volume for persistence
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=cbc_todo
+      - MYSQL_USER=todo_user
+      - MYSQL_PASSWORD=todo_pass
+    networks:
+      - todo-app
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6380:6379"
+    networks:
+      - todo-app
+
+# Define the network
+networks:
+  todo-app:
+    driver: bridge # Default Docker network driver
+
+# Define the volumes section to avoid the 'undefined volume' error
+volumes:
+  mysql_data: # Define the volume for MySQL persistence

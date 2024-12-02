@@ -1,0 +1,50 @@
+.app-header {
+    background-color: #000;
+    /* Green background */
+    color: white;
+    /* White text */
+    padding: 10px;
+    /* Some padding */
+
+    /* Centered text */
+}
+
+.app-header h1 {
+    line-height: 30px;
+    padding: 10px;
+    margin: 0;
+    font-size: 1em;
+    font-weight: 600;
+}
+
+#cbc_gem {
+    height: 30px;
+    padding: 10px;
+    float: left;
+}
+
+.app-header nav ul {
+    list-style-type: none;
+    /* Remove bullet points */
+    padding: 0;
+    /* Remove padding */
+}
+
+.app-header nav ul li {
+    display: inline;
+    /* Display items in a row */
+    margin: 0 15px;
+    /* Spacing between items */
+}
+
+.app-header nav ul li a {
+    color: white;
+    /* White links */
+    text-decoration: none;
+    /* Remove underline */
+}
+
+.app-header nav ul li a:hover {
+    text-decoration: underline;
+    /* Underline on hover */
+}
